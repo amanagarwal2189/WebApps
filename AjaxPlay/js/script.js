@@ -13,11 +13,14 @@ function loadData() {
     // clear out old data before new request
     $wikiElem.text("");
     $nytElem.text("");
+	$($nytHeaderElem).text("New York Times Articles");
 
     // load streetview
 	$body.append('<img class="bgimg" src =  "http://maps.googleapis.com/maps/api/streetview?size=600x300&location='+ address +'"/>');
+	//load NYT articles
 	$.getJSON( api_NYT, function( data ) {
 		var items = [];
+		$($nytHeaderElem).text("New York Times Articles about " + address);
 		$.each( data.response.docs, function( key, val ) {
 				var url = val.web_url;
 				var lead_para = val.lead_paragraph;
@@ -29,6 +32,8 @@ function loadData() {
 			html: items.join( "" )
 		}).appendTo($nytElem);
 		console.log(data);
+	}).error(function(e){
+		$($nytHeaderElem).text("New York Times Articles could not be found");
 	});	
     return false;
 };
