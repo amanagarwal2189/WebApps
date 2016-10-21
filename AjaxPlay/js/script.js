@@ -9,7 +9,11 @@ function loadData() {
 	var $cityStr = $('#city').val();
 	var address = $streetStr+", "+ $cityStr;
 	var web_adress = $streetStr+"%2C%20"+ $cityStr;
-	var api_NYT = "http://api.nytimes.com/svc/search/v2/articlesearch.json?q="+ web_adress +"&api-key=7bec642e9708479c8c48f4c9645c5070";
+	var $NYT_api_key = "";
+	$.get('NYT_APIkey.txt', function(data) {
+		$NYT_api_key = data;
+	}, 'text');
+	var api_NYT = "http://api.nytimes.com/svc/search/v2/articlesearch.json?q="+ web_adress +"&api-key="+$NYT_api_key;
     // clear out old data before new request
     $wikiElem.text("");
     $nytElem.text("");
