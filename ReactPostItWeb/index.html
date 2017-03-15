@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    	
+        <title>Bulletin Board</title>
+        <script src="https://unpkg.com/react@15/dist/react.min.js"></script>
+        <script src="https://unpkg.com/react-dom@15/dist/react-dom.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/1.0.0/fetch.js"></script>
+        <script src="https://npmcdn.com/react-draggable"></script>
+        <link rel = "stylesheet" type="text/css" href="css/style.css">
+    </head>
+    <body>
+        <div id="react-container"></div>
+        
+        <script type="text/babel">
+            var Note = React.createClass({
+                getInitialState(){
+                    return{editing:false}
+                },
+                componentWillMount(){
+                    this.style = {
+                        right: this.randomBetween(0, window.innerWidth-150, 'px'),
+                        top: this.randomBetween(0, window.innerWidth-150, 'px')
+                    }
+                },
+                componentDidUpdate(){
+                    if(this.state.editing){
+                        this.refs.newText.focus()
+                        this.refs.newText.select()
+                    }
+                },
+                /*THis makes performannce improvement. Render only when there is an update tp the component*/
+                shouldComponentUpdate(nextProps, nextState){
+                    return this.props.children !== nextProps.children || this.state !== nextState.state
+                },
+                randomBetween(x,y,s){
+                    return (x + Math.ceil(Math.random() * (y-x))) + s
+                },
+                edit(){
+                    this.setState({editing:true})
+                },
+                save(){
+                    this.props.onChange(this.refs.newText.value, this.props.id)
+                    this.setState({editing:false})
+                },
+                remove(){
+                    this.props.onRemove (this.props.id)
+                },
+                renderForm(){
+                    return (
+                        <div className="note"
+                                style={this.style}>
+                            <textarea ref="newText" defaultValue ={this.props.children}></textarea>
+                            <button onClick={this.save}>Save</button>
+                        </div>
+                    )
+                },
+                renderDisplay(){
+                    return ( <div className="note" style={this.style}>
+                        <p>{this.props.children}</p>
+                        <span>
+                            <button onClick={this.edit}>Edit</button>
+                            <button onClick={this.remove}>X</button>
+                        </span>
+                    </div>
+                    )
+                },
+                render(){
+                    return (<ReactDraggable>{(this.state.editing) ? this.renderForm()
+                                                : this.renderDisplay()}</ReactDraggable>)
+                }
+            })  
+
+            var Board = React.createClass({
+                propTypes: {
+                    count: function(props, propName){
+                        if(typeof props[propName] !== "number"){
+                            return new Error ("count must be number")
+                        }
+                        if( props[propName] > 100){
+                            return new Error ("Too high a number:" + props[propName])
+                        }
+                    }
+                },
+                getInitialState(){
+                    return{
+                        notes:[]
+                    }
+                },
+                nextId(){
+                    this.uniqueId=this.uniqueId || 0
+                    return this.uniqueId++
+                },
+
+                componentWillMount(){
+                    if(this.props.count){
+                        var header = new Headers({
+                            'Access-Control-Allow-Origin':'',
+                            'Content-Type': 'multipart/form-data'
+                        });
+                        var sentData={
+                            method:'POST',
+                            mode: 'cors',
+                            header: header,
+                            body:''
+                        };
+
+                        var url = `http://baconipsum.com/api?type=all-meat&sentences=${this.props.count}`
+                        fetch(url, sentData)
+                            .then(results => results.json())
+                            .then(array =>array[0])
+                            .then(text =>text.split('. '))
+                            .then(array => array.forEach(
+                                sentence => this.add(sentence)))
+                            .catch(function(err){
+                                console.log("No data loaded", err)
+                            })
+                    }
+                },
+                /*first add all the notes that exist in the array and then add new one*/
+                add(text){
+                    var notes = [
+                        ...this.state.notes,
+                        {
+                            id: this.nextId(),
+                            note:text
+                        }
+                    ]
+                    this.setState({notes})
+                },
+
+                /*This checks the note array to find if the array has the id 
+                  equal to the one passed. if not, the note is 
+                  added as is, else, the note is updated and then put in the map
+                */
+
+                update(newText, id){
+                    var notes = this.state.notes.map(
+                        note =>(note.id !== id) ? note
+                        :
+                        {
+                            ...note,
+                            note: newText
+                        }
+                    )
+                    this.setState({notes})
+                },
+                remove(id){
+                    /*This returns copies the note array and filters to return the array without the note of that id*/
+                    
+                    var notes = this.state.notes.filter(note => note.id !== id)
+                    this.setState({notes})
+                },
+                eachNote(note){
+                    return (<Note key = {note.id} 
+                                    id =  {note.id}
+                                    onChange = {this.update}
+                                    onRemove = {this.remove}>{note.note}</Note>)
+                },
+                render(){
+                    return(<div className="board">
+                                {this.state.notes.map(this.eachNote)}
+                                <button onClick = {() => this.add()}>New Note</button>
+                            </div>)
+                }
+            })
+
+            ReactDOM.render(<Board count={10}></Board>, document.getElementById('react-container'))
+        </script>
+    </body>
+</html>
